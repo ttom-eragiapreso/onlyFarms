@@ -1,4 +1,13 @@
 import { v2 as cloudinary } from 'cloudinary';
+import { 
+  isUsingLocalStorage, 
+  uploadImageToLocal, 
+  uploadVideoToLocal, 
+  deleteFromLocal, 
+  getOptimizedUrl as getLocalOptimizedUrl,
+  getVideoThumbnail as getLocalVideoThumbnail,
+  fileToBuffer
+} from './local-storage.js';
 
 // Configure Cloudinary
 cloudinary.config({
@@ -9,10 +18,19 @@ cloudinary.config({
 
 export default cloudinary;
 
-// Helper functions for file uploads
-export const uploadImage = async (file, options = {}) => {
+// Helper functions for file uploads with local storage fallback
+export const uploadImage = async (fileOrBuffer, originalName = 'image', options = {}) => {
+  // Use local storage in development
+  if (isUsingLocalStorage()) {
+    const buffer = fileOrBuffer instanceof Buffer ? fileOrBuffer : await fileToBuffer(fileOrBuffer);
+    return uploadImageToLocal(buffer, originalName, {
+      folder: 'images',
+      ...options
+    });
+  }
+
   try {
-    const result = await cloudinary.uploader.upload(file, {
+    const result = await cloudinary.uploader.upload(fileOrBuffer, {
       resource_type: 'image',
       folder: 'onlyfarms/images',
       transformation: [
@@ -28,9 +46,18 @@ export const uploadImage = async (file, options = {}) => {
   }
 };
 
-export const uploadVideo = async (file, options = {}) => {
+export const uploadVideo = async (fileOrBuffer, originalName = 'video', options = {}) => {
+  // Use local storage in development
+  if (isUsingLocalStorage()) {
+    const buffer = fileOrBuffer instanceof Buffer ? fileOrBuffer : await fileToBuffer(fileOrBuffer);
+    return uploadVideoToLocal(buffer, originalName, {
+      folder: 'videos',
+      ...options
+    });
+  }
+
   try {
-    const result = await cloudinary.uploader.upload(file, {
+    const result = await cloudinary.uploader.upload(fileOrBuffer, {
       resource_type: 'video',
       folder: 'onlyfarms/videos',
       transformation: [
@@ -51,8 +78,16 @@ export const uploadVideo = async (file, options = {}) => {
   }
 };
 
-export const uploadProfileImage = async (file, userId) => {
-  return uploadImage(file, {
+export const uploadProfileImage = async (fileOrBuffer, userId) => {
+  if (isUsingLocalStorage()) {
+    const buffer = fileOrBuffer instanceof Buffer ? fileOrBuffer : await fileToBuffer(fileOrBuffer);
+    return uploadImageToLocal(buffer, `profile_${userId}.jpg`, {
+      folder: 'profiles',
+      public_id: `profile_${userId}`
+    });
+  }
+
+  return uploadImage(fileOrBuffer, `profile_${userId}.jpg`, {
     public_id: `onlyfarms/profiles/${userId}`,
     overwrite: true,
     transformation: [
@@ -62,8 +97,16 @@ export const uploadProfileImage = async (file, userId) => {
   });
 };
 
-export const uploadCoverImage = async (file, userId) => {
-  return uploadImage(file, {
+export const uploadCoverImage = async (fileOrBuffer, userId) => {
+  if (isUsingLocalStorage()) {
+    const buffer = fileOrBuffer instanceof Buffer ? fileOrBuffer : await fileToBuffer(fileOrBuffer);
+    return uploadImageToLocal(buffer, `cover_${userId}.jpg`, {
+      folder: 'covers',
+      public_id: `cover_${userId}`
+    });
+  }
+
+  return uploadImage(fileOrBuffer, `cover_${userId}.jpg`, {
     public_id: `onlyfarms/covers/${userId}`,
     overwrite: true,
     transformation: [
@@ -73,8 +116,12 @@ export const uploadCoverImage = async (file, userId) => {
   });
 };
 
-// Delete file from Cloudinary
-export const deleteFile = async (publicId) => {
+// Delete file from Cloudinary or local storage
+export const deleteFile = async (publicId, folder = '') => {
+  if (isUsingLocalStorage()) {
+    return deleteFromLocal(publicId, folder);
+  }
+
   try {
     const result = await cloudinary.uploader.destroy(publicId);
     return result;
@@ -86,6 +133,10 @@ export const deleteFile = async (publicId) => {
 
 // Generate optimized URLs
 export const getOptimizedUrl = (publicId, options = {}) => {
+  if (isUsingLocalStorage()) {
+    return getLocalOptimizedUrl(publicId, options);
+  }
+
   return cloudinary.url(publicId, {
     quality: 'auto:good',
     format: 'auto',
@@ -94,6 +145,10 @@ export const getOptimizedUrl = (publicId, options = {}) => {
 };
 
 export const getVideoThumbnail = (publicId, options = {}) => {
+  if (isUsingLocalStorage()) {
+    return getLocalVideoThumbnail(publicId, options);
+  }
+
   return cloudinary.url(publicId, {
     resource_type: 'video',
     format: 'jpg',
@@ -103,3 +158,6 @@ export const getVideoThumbnail = (publicId, options = {}) => {
     ...options,
   });
 };
+
+// Export the fileToBuffer helper
+export { fileToBuffer };

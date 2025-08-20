@@ -66,6 +66,10 @@ const UserSchema = new mongoose.Schema({
       type: Boolean,
       default: true,
     },
+    stripeSubscriptionId: {
+      type: String,
+      default: null,
+    },
   }],
   subscribedTo: [{
     creator: {
@@ -83,6 +87,15 @@ const UserSchema = new mongoose.Schema({
       type: Boolean,
       default: true,
     },
+    stripeSubscriptionId: {
+      type: String,
+      default: null,
+    },
+  }],
+  // Following other creators (simple follow, not subscription)
+  following: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
   }],
   // Financial tracking
   totalEarnings: {
@@ -102,6 +115,10 @@ const UserSchema = new mongoose.Schema({
     type: String,
     default: null,
   },
+  stripePriceId: {
+    type: String,
+    default: null,
+  },
   // Settings
   isProfilePublic: {
     type: Boolean,
@@ -115,8 +132,7 @@ const UserSchema = new mongoose.Schema({
   timestamps: true,
 });
 
-// Indexes for performance
-UserSchema.index({ email: 1 });
+// Indexes for performance (email index is automatic from unique: true)
 UserSchema.index({ role: 1 });
 UserSchema.index({ 'subscribers.user': 1 });
 UserSchema.index({ 'subscribedTo.creator': 1 });
