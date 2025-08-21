@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { Input, TextArea } from '../../../components/forms';
 
 export default function CreateContent() {
   const { data: session, status } = useSession();
@@ -141,69 +142,49 @@ export default function CreateContent() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Left Column - Content Details */}
               <div className="space-y-6">
-                <div>
-                  <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
-                    Title *
-                  </label>
-                  <input
-                    type="text"
-                    id="title"
-                    name="title"
-                    value={formData.title}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    placeholder="Enter content title"
-                  />
-                </div>
+                <Input
+                  type="text"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleInputChange}
+                  label="Title"
+                  placeholder="Enter content title"
+                  variant="default"
+                  required
+                />
 
-                <div>
-                  <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
-                    Description
-                  </label>
-                  <textarea
-                    id="description"
-                    name="description"
-                    value={formData.description}
-                    onChange={handleInputChange}
-                    rows={4}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
-                    placeholder="Describe your content..."
-                  />
-                </div>
+                <TextArea
+                  name="description"
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  label="Description"
+                  placeholder="Describe your content..."
+                  variant="default"
+                  rows={4}
+                />
 
-                <div>
-                  <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-2">
-                    Price ($)
-                  </label>
-                  <input
-                    type="number"
-                    id="price"
-                    name="price"
-                    value={formData.price}
-                    onChange={handleInputChange}
-                    min="0"
-                    step="0.01"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    placeholder="0.00"
-                  />
-                  <p className="text-sm text-gray-500 mt-1">Leave empty for subscriber-only content</p>
-                </div>
+                <Input
+                  type="number"
+                  name="price"
+                  value={formData.price}
+                  onChange={handleInputChange}
+                  label="Price ($)"
+                  placeholder="0.00"
+                  helperText="Leave empty for subscriber-only content"
+                  variant="default"
+                  min="0"
+                  step="0.01"
+                />
 
-                <div>
-                  <label htmlFor="tags" className="block text-sm font-medium text-gray-700 mb-2">
-                    Tags
-                  </label>
-                  <input
-                    type="text"
-                    id="tags"
-                    name="tags"
-                    value={formData.tags}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    placeholder="fitness, lifestyle, tutorial (comma-separated)"
-                  />
-                </div>
+                <Input
+                  type="text"
+                  name="tags"
+                  value={formData.tags}
+                  onChange={handleInputChange}
+                  label="Tags"
+                  placeholder="fitness, lifestyle, tutorial (comma-separated)"
+                  variant="default"
+                />
 
                 <div className="flex items-center">
                   <input

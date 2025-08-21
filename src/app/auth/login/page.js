@@ -4,6 +4,7 @@ import { signIn, getSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Input } from '../../../components/forms';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -107,35 +108,27 @@ export default function LoginPage() {
               )}
 
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Email Address
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    placeholder="Enter your email address"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 text-gray-900 placeholder:text-gray-500"
-                    required
-                  />
-                </div>
+                <Input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  label="Email Address"
+                  placeholder="Enter your email address"
+                  variant="modern"
+                  required
+                />
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Password
-                  </label>
-                  <input
-                    type="password"
-                    name="password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    placeholder="Enter your password"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 text-gray-900 placeholder:text-gray-500"
-                    required
-                  />
-                </div>
+                <Input
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  label="Password"
+                  placeholder="Enter your password"
+                  variant="modern"
+                  required
+                />
               </div>
 
               <button

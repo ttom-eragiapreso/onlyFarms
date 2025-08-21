@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Input } from '../../../components/forms';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -185,66 +186,51 @@ export default function RegisterPage() {
               </div>
 
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Full Name
-                  </label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    placeholder="Enter your full name"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 text-gray-900 placeholder:text-gray-500"
-                    required
-                  />
-                </div>
+                <Input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  label="Full Name"
+                  placeholder="Enter your full name"
+                  variant="modern"
+                  required
+                />
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Email Address
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    placeholder="Enter your email address"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 text-gray-900 placeholder:text-gray-500"
-                    required
-                  />
-                </div>
+                <Input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  label="Email Address"
+                  placeholder="Enter your email address"
+                  variant="modern"
+                  required
+                />
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Password
-                  </label>
-                  <input
-                    type="password"
-                    name="password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    placeholder="Create a password (min. 6 characters)"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 text-gray-900 placeholder:text-gray-500"
-                    required
-                    minLength={6}
-                  />
-                </div>
+                <Input
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  label="Password"
+                  placeholder="Create a password (min. 6 characters)"
+                  helperText="Minimum 6 characters required"
+                  variant="modern"
+                  minLength={6}
+                  required
+                />
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Confirm Password
-                  </label>
-                  <input
-                    type="password"
-                    name="confirmPassword"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    placeholder="Confirm your password"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 text-gray-900 placeholder:text-gray-500"
-                    required
-                  />
-                </div>
+                <Input
+                  type="password"
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  label="Confirm Password"
+                  placeholder="Confirm your password"
+                  variant="modern"
+                  required
+                />
               </div>
 
               <button
