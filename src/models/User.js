@@ -50,53 +50,62 @@ const UserSchema = new mongoose.Schema({
     default: false,
   },
   // Subscription management
-  subscribers: [{
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-    },
-    subscribedAt: {
-      type: Date,
-      default: Date.now,
-    },
-    subscriptionEndDate: {
-      type: Date,
-    },
-    isActive: {
-      type: Boolean,
-      default: true,
-    },
-    stripeSubscriptionId: {
-      type: String,
-      default: null,
-    },
-  }],
-  subscribedTo: [{
-    creator: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-    },
-    subscribedAt: {
-      type: Date,
-      default: Date.now,
-    },
-    subscriptionEndDate: {
-      type: Date,
-    },
-    isActive: {
-      type: Boolean,
-      default: true,
-    },
-    stripeSubscriptionId: {
-      type: String,
-      default: null,
-    },
-  }],
+  subscribers: {
+    type: [{
+      user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+      subscribedAt: {
+        type: Date,
+        default: Date.now,
+      },
+      subscriptionEndDate: {
+        type: Date,
+      },
+      isActive: {
+        type: Boolean,
+        default: true,
+      },
+      stripeSubscriptionId: {
+        type: String,
+        default: null,
+      },
+    }],
+    default: [],
+  },
+  subscribedTo: {
+    type: [{
+      creator: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+      subscribedAt: {
+        type: Date,
+        default: Date.now,
+      },
+      subscriptionEndDate: {
+        type: Date,
+      },
+      isActive: {
+        type: Boolean,
+        default: true,
+      },
+      stripeSubscriptionId: {
+        type: String,
+        default: null,
+      },
+    }],
+    default: [],
+  },
   // Following other creators (simple follow, not subscription)
-  following: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-  }],
+  following: {
+    type: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    }],
+    default: [],
+  },
   // Financial tracking
   totalEarnings: {
     type: Number,
@@ -139,17 +148,17 @@ UserSchema.index({ 'subscribedTo.creator': 1 });
 
 // Virtual for subscriber count
 UserSchema.virtual('subscriberCount').get(function() {
-  return this.subscribers.filter(sub => sub.isActive).length;
+  return (this.subscribers || []).filter(sub => sub.isActive).length;
 });
 
 // Virtual for subscription count
 UserSchema.virtual('subscriptionCount').get(function() {
-  return this.subscribedTo.filter(sub => sub.isActive).length;
+  return (this.subscribedTo || []).filter(sub => sub.isActive).length;
 });
 
 // Method to check if user is subscribed to a creator
 UserSchema.methods.isSubscribedTo = function(creatorId) {
-  return this.subscribedTo.some(sub => 
+  return (this.subscribedTo || []).some(sub => 
     sub.creator.toString() === creatorId.toString() && 
     sub.isActive && 
     sub.subscriptionEndDate > new Date()
@@ -160,6 +169,10 @@ UserSchema.methods.isSubscribedTo = function(creatorId) {
 UserSchema.methods.subscribe = function(creatorId, duration = 30) {
   const subscriptionEndDate = new Date();
   subscriptionEndDate.setDate(subscriptionEndDate.getDate() + duration);
+  
+  if (!Array.isArray(this.subscribedTo)) {
+    this.subscribedTo = [];
+  }
   
   this.subscribedTo.push({
     creator: creatorId,

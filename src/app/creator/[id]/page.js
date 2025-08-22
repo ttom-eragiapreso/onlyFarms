@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useParams } from 'next/navigation';
 import SubscriptionModal from '@/components/SubscriptionModal';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function CreatorProfile() {
   const { data: session, status } = useSession();
@@ -14,9 +15,11 @@ export default function CreatorProfile() {
   const [creator, setCreator] = useState(null);
   const [content, setContent] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isSubscribedState, setIsSubscribedState] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [following, setFollowing] = useState(false);
+  const [purchasing, setPurchasing] = useState({});
+  const [subscribing, setSubscribing] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -38,12 +41,12 @@ export default function CreatorProfile() {
       if (creatorResponse.ok) {
         const creatorData = await creatorResponse.json();
         setCreator(creatorData);
-        setIsSubscribed(creatorData.isSubscribed);
+        setIsSubscribedState(creatorData.isSubscribed);
         setFollowing(creatorData.isFollowing);
       }
       
       // Fetch creator's content
-      const contentResponse = await fetch(`/api/content?creatorId=${id}`);
+      const contentResponse = await fetch(`/api/content?creator=${id}`);
       if (contentResponse.ok) {
         const contentData = await contentResponse.json();
         setContent(contentData.content || []);
@@ -55,18 +58,53 @@ export default function CreatorProfile() {
     }
   };
 
-  const handleSubscribe = () => {
+  const handleSubscribe = async () => {
     if (!session) {
       router.push('/auth/login');
       return;
     }
-    setShowSubscriptionModal(true);
+    try {
+      setSubscribing(true);
+      const res = await fetch(`/api/creators/${id}/subscribe`, { method: 'POST' });
+      if (res.ok) {
+        setIsSubscribedState(true);
+        // refresh creator and content
+        fetchCreatorProfile();
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Subscription failed');
+      }
+    } catch (e) {
+      console.error('Subscribe error:', e);
+      alert('Subscription failed');
+    } finally {
+      setSubscribing(false);
+    }
   };
 
   const handleSubscriptionSuccess = () => {
-    setIsSubscribed(true);
+    setIsSubscribedState(true);
     setShowSubscriptionModal(false);
     fetchCreatorProfile(); // Refresh to show updated content
+  };
+
+  const handlePurchase = async (contentId) => {
+    try {
+      setPurchasing(prev => ({ ...prev, [contentId]: true }));
+      const res = await fetch(`/api/content/${contentId}/purchase`, { method: 'POST' });
+      if (res.ok) {
+        setContent(prev => prev.map(item => item._id === contentId ? { ...item, hasAccess: true } : item));
+        alert('Purchase successful! You now have access to this content.');
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Purchase failed');
+      }
+    } catch (e) {
+      console.error('Purchase error:', e);
+      alert('Purchase failed');
+    } finally {
+      setPurchasing(prev => ({ ...prev, [contentId]: false }));
+    }
   };
 
   const handleFollow = async () => {
@@ -169,7 +207,7 @@ export default function CreatorProfile() {
                 <div className="space-y-3">
                   {creator._id !== session?.user?.id && (
                     <>
-                      {isSubscribed ? (
+{isSubscribedState ? (
                         <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                           <div className="flex items-center">
                             <svg className="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -181,9 +219,10 @@ export default function CreatorProfile() {
                       ) : creator.subscriptionPrice > 0 ? (
                         <button
                           onClick={handleSubscribe}
-                          className="w-full btn btn-primary bg-gradient-to-r from-purple-600 to-pink-600 border-0 hover:shadow-lg"
+                          disabled={subscribing}
+                          className="w-full btn btn-primary bg-gradient-to-r from-purple-600 to-pink-600 border-0 hover:shadow-lg disabled:opacity-50"
                         >
-                          Subscribe for ${creator.subscriptionPrice}/month
+                          {subscribing ? 'Subscribing...' : `Subscribe for ${creator.subscriptionPrice}/month`}
                         </button>
                       ) : (
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
@@ -211,7 +250,7 @@ export default function CreatorProfile() {
           <div className="lg:w-2/3">
             <div className="mb-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                {isSubscribed || creator.subscriptionPrice === 0 ? 'Posts' : 'Preview'}
+                {isSubscribedState || creator.subscriptionPrice === 0 ? 'Posts' : 'Preview'}
               </h2>
             </div>
 
@@ -256,48 +295,79 @@ export default function CreatorProfile() {
                       )}
                     </div>
 
-                    {/* Content Media */}
-                    {(isSubscribed || creator.subscriptionPrice === 0 || !item.isSubscriberOnly) ? (
-                      <div className="px-6 pb-6">
-                        {item.mediaUrl && (
-                          <div className="rounded-lg overflow-hidden">
-                            {item.mediaType === 'image' ? (
-                              <img
-                                src={item.mediaUrl}
-                                alt={item.title || 'Content'}
-                                className="w-full h-auto"
-                              />
-                            ) : (
-                              <video
-                                src={item.mediaUrl}
-                                controls
-                                className="w-full h-auto"
-                              >
-                                Your browser does not support the video tag.
-                              </video>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="px-6 pb-6">
-                        <div className="bg-gradient-to-br from-purple-100 to-pink-100 rounded-lg p-8 text-center border-2 border-dashed border-purple-300">
-                          <svg className="w-12 h-12 text-purple-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                          </svg>
-                          <h4 className="text-lg font-semibold text-purple-900 mb-2">Subscribers Only</h4>
-                          <p className="text-purple-700 mb-4">
-                            Subscribe to {creator.name} to view this content
-                          </p>
-                          <button
-                            onClick={handleSubscribe}
-                            className="btn btn-primary bg-gradient-to-r from-purple-600 to-pink-600 border-0"
-                          >
-                            Subscribe for ${creator.subscriptionPrice}/month
-                          </button>
+                    {/* Content Media with paywall overlay */}
+                    <div className="relative">
+                      {item.mediaUrls && item.mediaUrls.length > 0 && (
+                        <div className="relative aspect-video bg-gray-100">
+                          {item.mediaUrls[0].type === 'image' ? (
+                            <Image
+                              src={item.mediaUrls[0].url}
+                              alt={item.title || 'Content'}
+                              fill
+                              className={`object-cover ${!item.hasAccess ? 'opacity-10' : ''}`}
+                            />
+                          ) : (
+                            <video
+                              className={`w-full h-full object-cover ${!item.hasAccess ? 'opacity-10' : ''}`}
+                              controls={item.hasAccess}
+                              poster={item.mediaUrls[0].thumbnail}
+                            >
+                              {item.hasAccess && (
+                                <source src={item.mediaUrls[0].url} type="video/mp4" />
+                              )}
+                            </video>
+                          )}
+
+                          {!item.hasAccess && (
+                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                              <svg className="w-16 h-16 text-white/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                              </svg>
+                            </div>
+                          )}
+
+                          {/* CTA gradient overlay */}
+                          {!item.hasAccess && (
+                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-6">
+                              <div className="text-center text-white">
+                                <h3 className="text-lg font-semibold mb-2">
+                                  {item.accessType === 'pay-per-view' ? 'Premium Content' : 'Subscriber Only'}
+                                </h3>
+                                <p className="text-sm opacity-90 mb-4">
+                                  {item.accessType === 'pay-per-view' 
+                                    ? `Purchase for $${item.price.toFixed(2)} to view this content`
+                                    : `Subscribe to ${creator.name} to view this content`
+                                  }
+                                </p>
+                                {item.accessType === 'pay-per-view' ? (
+                                  <button
+                                    onClick={() => handlePurchase(item._id)}
+                                    disabled={purchasing[item._id]}
+                                    className="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-medium hover:shadow-lg transition-all duration-200 disabled:opacity-50"
+                                  >
+                                    {purchasing[item._id] ? (
+                                      <div className="flex items-center">
+                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                                        Processing...
+                                      </div>
+                                    ) : (
+                                      `Purchase for $${item.price.toFixed(2)}`
+                                    )}
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={handleSubscribe}
+                                    className="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-medium hover:shadow-lg transition-all duration-200 disabled:opacity-50"
+                                  >
+                                    Subscribe
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
 
                     {/* Content Footer */}
                     <div className="px-6 py-4 border-t border-gray-100">
@@ -307,13 +377,13 @@ export default function CreatorProfile() {
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                             </svg>
-                            <span className="text-sm">{item.likes || 0}</span>
+<span className="text-sm">{item.likeCount || 0}</span>
                           </button>
                           <button className="flex items-center space-x-1 text-gray-500 hover:text-blue-500">
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                             </svg>
-                            <span className="text-sm">{item.comments || 0}</span>
+<span className="text-sm">{item.commentCount || 0}</span>
                           </button>
                         </div>
                         

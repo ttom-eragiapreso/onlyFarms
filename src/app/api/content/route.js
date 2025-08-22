@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]/route';
 import { connectDB } from '@/lib/mongodb';
 import Content from '@/models/Content';
+import User from '@/models/User';
 import { uploadImage, uploadVideo, fileToBuffer } from '@/lib/cloudinary';
 
 export async function POST(request) {
@@ -146,19 +147,44 @@ export async function GET(request) {
       query.creator = creatorId;
     }
     
-    // If not the creator themselves, only show published content or content they have access to
+    // If not the creator themselves, only show published content
     if (!creatorId || creatorId !== session.user.id) {
       query.isPublished = true;
     }
 
-    const content = await Content.find(query)
-      .populate('creator', 'name profileImage')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean();
+    const [contentDocs, total, currentUser] = await Promise.all([
+      Content.find(query)
+        .populate('creator', 'name profileImage')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Content.countDocuments(query),
+      User.findById(session.user.id).select('subscribedTo')
+    ]);
 
-    const total = await Content.countDocuments(query);
+    // Map to serialized content with access flags
+    const content = contentDocs.map(doc => {
+      const c = doc.toObject({ virtuals: true });
+      // Compute access
+      let hasAccess = false;
+      let hasPurchased = false;
+      if (doc.accessType === 'free') {
+        hasAccess = true;
+      } else if (doc.accessType === 'subscription') {
+        // user has access if subscribed to this creator
+        const subscribed = currentUser?.subscribedTo?.some(sub => sub.creator.toString() === doc.creator._id.toString() && sub.isActive && (!sub.subscriptionEndDate || sub.subscriptionEndDate > new Date()));
+        hasAccess = subscribed || (doc.creator._id.toString() === session.user.id);
+      } else if (doc.accessType === 'pay-per-view') {
+        hasPurchased = doc.purchases?.some(p => p.user.toString() === session.user.id) || false;
+        hasAccess = hasPurchased || (doc.creator._id.toString() === session.user.id);
+      }
+
+      return {
+        ...c,
+        hasAccess,
+        hasPurchased,
+      };
+    });
     
     return NextResponse.json({
       content,

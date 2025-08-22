@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../auth/[...nextauth]/route';
-import { connectToMongoDB } from '@/lib/mongodb';
+import { connectDB } from '@/lib/mongodb';
 import User from '@/models/User';
+import Content from '@/models/Content';
 
 export async function GET(request, { params }) {
   try {
@@ -11,13 +12,13 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { creatorId } = params;
+    const { creatorId } = await params;
     
     if (!creatorId) {
       return NextResponse.json({ error: 'Creator ID is required' }, { status: 400 });
     }
 
-    await connectToMongoDB();
+    await connectDB();
 
     // Get current user
     const currentUser = await User.findOne({ email: session.user.email });
@@ -43,13 +44,14 @@ export async function GET(request, { params }) {
     });
 
     // Count creator's content
-    const contentCount = 0; // TODO: Add content count when we have content
+    const contentCount = await Content.countDocuments({ creator: creatorId });
 
     const response = {
       _id: creator._id,
       name: creator.name,
       email: creator.email,
       image: creator.image,
+      profileImage: creator.profileImage,
       role: creator.role,
       bio: creator.bio,
       coverImage: creator.coverImage,

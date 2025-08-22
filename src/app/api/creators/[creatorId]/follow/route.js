@@ -4,65 +4,54 @@ import { authOptions } from '../../../auth/[...nextauth]/route';
 import { connectDB } from '@/lib/mongodb';
 import User from '@/models/User';
 
-export async function POST(request, { params }) {
+export async function POST(request, context) {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { creatorId } = params;
-
+    const { creatorId } = await context.params;
     if (!creatorId) {
-      return NextResponse.json({ error: 'Creator ID required' }, { status: 400 });
+      return NextResponse.json({ error: 'Creator ID is required' }, { status: 400 });
     }
 
     await connectDB();
 
-    // Get current user
-    const currentUser = await User.findById(session.user.id);
-    if (!currentUser) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-
-    // Check if creator exists
-    const creator = await User.findById(creatorId);
-    if (!creator) {
-      return NextResponse.json({ error: 'Creator not found' }, { status: 404 });
-    }
-
-    // Can't follow yourself
-    if (creatorId === session.user.id) {
+    if (session.user.id === creatorId) {
       return NextResponse.json({ error: 'Cannot follow yourself' }, { status: 400 });
     }
 
-    const isCurrentlyFollowing = currentUser.following?.includes(creatorId) || false;
-    
-    if (isCurrentlyFollowing) {
-      // Unfollow
-      await User.findByIdAndUpdate(session.user.id, {
-        $pull: { following: creatorId }
-      });
-    } else {
-      // Follow
-      await User.findByIdAndUpdate(session.user.id, {
-        $addToSet: { following: creatorId }
-      });
+    const user = await User.findById(session.user.id).select('following');
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Get updated follower count
-    const followerCount = await User.countDocuments({
-      following: creatorId
-    });
+    if (!Array.isArray(user.following)) {
+      user.following = [];
+    }
+
+    const isFollowing = user.following.some(id => id.toString() === creatorId);
+
+    if (isFollowing) {
+      // Unfollow
+      user.following = user.following.filter(id => id.toString() !== creatorId);
+    } else {
+      // Follow
+      user.following.push(creatorId);
+    }
+
+    await user.save();
+
+    // Compute follower count
+    const followerCount = await User.countDocuments({ following: creatorId });
 
     return NextResponse.json({
-      isFollowing: !isCurrentlyFollowing,
-      followerCount
-    });
-
+      isFollowing: !isFollowing,
+      followerCount,
+    }, { status: 200 });
   } catch (error) {
-    console.error('Error following/unfollowing creator:', error);
+    console.error('Error toggling follow:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

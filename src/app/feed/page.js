@@ -14,6 +14,8 @@ export default function Feed() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [purchasing, setPurchasing] = useState({});
+  const [following, setFollowing] = useState({});
+  const [followingIds, setFollowingIds] = useState(new Set());
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -23,8 +25,21 @@ export default function Feed() {
     
     if (session) {
       fetchContent();
+      fetchFollowing();
     }
   }, [status, session, router]);
+
+  const fetchFollowing = async () => {
+    try {
+      const res = await fetch('/api/users/me/following', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        setFollowingIds(new Set(data.following || []));
+      }
+    } catch (e) {
+      console.error('Error loading following list:', e);
+    }
+  };
 
   const fetchContent = async (pageNum = 1) => {
     try {
@@ -53,26 +68,67 @@ export default function Feed() {
     fetchContent(nextPage);
   };
 
-  const handlePurchase = async (contentId, accessType, price) => {
+  const handleFollow = async (creatorId) => {
+    if (!session?.user?.id) return;
+
+    setFollowing(prev => ({ ...prev, [creatorId]: true }));
+    
+    try {
+      const res = await fetch(`/api/creators/${creatorId}/follow`, { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        // Update local following set
+        setFollowingIds(prev => {
+          const next = new Set(Array.from(prev));
+          if (data.isFollowing) next.add(creatorId);
+          else next.delete(creatorId);
+          return next;
+        });
+      }
+    } catch (error) {
+      console.error('Error following creator:', error);
+    } finally {
+      setFollowing(prev => ({ ...prev, [creatorId]: false }));
+    }
+  };
+
+  const handlePurchase = async (contentId, accessType, price, creatorId) => {
+    if (!session?.user?.id) return;
+
     setPurchasing(prev => ({ ...prev, [contentId]: true }));
     
     try {
-      // For now, we'll simulate a purchase
-      // In a real app, this would integrate with Stripe
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Update the content to show as purchased
-      setContent(prev => prev.map(item => 
-        item._id === contentId 
-          ? { ...item, hasPurchased: true, hasAccess: true }
-          : item
-      ));
-      
-      // Show success message
-      alert('Purchase successful! You now have access to this content.');
+      if (accessType === 'pay-per-view') {
+        const res = await fetch(`/api/content/${contentId}/purchase`, { method: 'POST' });
+        if (res.ok) {
+          setContent(prev => prev.map(item => 
+            item._id === contentId 
+              ? { ...item, hasPurchased: true, hasAccess: true }
+              : item
+          ));
+          alert('Purchase successful! You now have access to this content.');
+        } else {
+          const err = await res.json();
+          throw new Error(err.error || 'Purchase failed');
+        }
+      } else {
+        const res = await fetch(`/api/creators/${creatorId}/subscribe`, { method: 'POST' });
+        if (res.ok) {
+          // Mark all subscription content by this creator as accessible in current feed
+          setContent(prev => prev.map(item => 
+            item.creator._id === creatorId && item.accessType === 'subscription'
+              ? { ...item, hasAccess: true }
+              : item
+          ));
+          alert('Subscription successful! You now have access to all subscriber content.');
+        } else {
+          const err = await res.json();
+          throw new Error(err.error || 'Subscription failed');
+        }
+      }
     } catch (error) {
-      console.error('Purchase error:', error);
-      alert('Purchase failed. Please try again.');
+      console.error('Access action error:', error);
+      alert(error.message || 'Action failed. Please try again.');
     } finally {
       setPurchasing(prev => ({ ...prev, [contentId]: false }));
     }
@@ -183,9 +239,28 @@ export default function Feed() {
                     </div>
                     
                     {/* Follow Button */}
-                    <button className="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium">
-                      Follow
-                    </button>
+                    {post.creator._id !== session?.user?.id && (
+                      <button
+                        onClick={() => handleFollow(post.creator._id)}
+                        disabled={following[post.creator._id]}
+                        className={`px-4 py-2 rounded-lg transition-colors text-sm font-medium disabled:opacity-50 ${
+                          followingIds.has(post.creator._id)
+                            ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:shadow-md'
+                        }`}
+                      >
+                        {following[post.creator._id] ? (
+                          <div className="flex items-center">
+                            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2"></div>
+                            Loading...
+                          </div>
+                        ) : followingIds.has(post.creator._id) ? (
+                          'Following'
+                        ) : (
+                          'Follow'
+                        )}
+                      </button>
+                    )}
                   </div>
                   
                   {/* Content Title & Description */}
@@ -223,11 +298,11 @@ export default function Feed() {
                           alt={post.title}
                           fill
                           className={`object-cover ${
-                            !post.hasAccess ? 'opacity-30' : ''
+                            !post.hasAccess ? 'opacity-10' : ''
                           }`}
                         />
                         {!post.hasAccess && (
-                          <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                             <svg className="w-16 h-16 text-white/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                             </svg>
@@ -238,7 +313,7 @@ export default function Feed() {
                       <div className="relative aspect-video bg-gray-100">
                         <video
                           className={`w-full h-full object-cover ${
-                            !post.hasAccess ? 'opacity-30' : ''
+                            !post.hasAccess ? 'opacity-10' : ''
                           }`}
                           controls={post.hasAccess}
                           poster={post.mediaUrls[0].thumbnail}
@@ -248,7 +323,7 @@ export default function Feed() {
                           )}
                         </video>
                         {!post.hasAccess && (
-                          <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                             <div className="text-center text-white">
                               <svg className="w-16 h-16 mx-auto mb-2" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M8 5v14l11-7z"/>
@@ -278,7 +353,7 @@ export default function Feed() {
                             }
                           </p>
                           <button
-                            onClick={() => handlePurchase(post._id, post.accessType, post.price)}
+                            onClick={() => handlePurchase(post._id, post.accessType, post.price, post.creator._id)}
                             disabled={purchasing[post._id]}
                             className="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-medium hover:shadow-lg transition-all duration-200 disabled:opacity-50"
                           >

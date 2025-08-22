@@ -16,7 +16,8 @@ export default function CreateContent() {
     description: '',
     price: '',
     tags: '',
-    isPublic: false
+    isPublic: false,
+    isSubscriberOnly: false
   });
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [previewUrls, setPreviewUrls] = useState([]);
