@@ -207,9 +207,10 @@ export default function CreatorProfile() {
                 <div className="space-y-3">
                   {creator._id !== session?.user?.id && (
                     <>
-{isSubscribedState ? (
+                      {/* Subscription Status/Button */}
+                      {isSubscribedState ? (
                         <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                          <div className="flex items-center">
+                          <div className="flex items-center justify-center">
                             <svg className="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                             </svg>
@@ -220,24 +221,48 @@ export default function CreatorProfile() {
                         <button
                           onClick={handleSubscribe}
                           disabled={subscribing}
-                          className="w-full btn btn-primary bg-gradient-to-r from-purple-600 to-pink-600 border-0 hover:shadow-lg disabled:opacity-50"
+                          className="w-full px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-medium hover:shadow-lg transition-all duration-200 disabled:opacity-50"
                         >
-                          {subscribing ? 'Subscribing...' : `Subscribe for ${creator.subscriptionPrice}/month`}
+                          {subscribing ? (
+                            <div className="flex items-center justify-center">
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                              Subscribing...
+                            </div>
+                          ) : (
+                            `Subscribe for $${creator.subscriptionPrice}/month`
+                          )}
                         </button>
                       ) : (
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
-                          <span className="text-blue-800 font-medium">Free Content</span>
+                        <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-3">
+                          <div className="flex items-center justify-center">
+                            <svg className="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                            </svg>
+                            <span className="text-green-800 font-medium">Free Creator</span>
+                          </div>
+                          <p className="text-xs text-green-700 text-center mt-1">All content is free to view</p>
                         </div>
                       )}
                       
+                      {/* Follow Button */}
                       <button
                         onClick={handleFollow}
-                        className={`w-full btn ${following 
-                          ? 'btn-ghost border-gray-300' 
-                          : 'btn-outline btn-primary'
+                        className={`w-full px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
+                          following 
+                            ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300' 
+                            : 'bg-white text-purple-600 border-2 border-purple-200 hover:border-purple-300 hover:bg-purple-50'
                         }`}
                       >
-                        {following ? 'Following' : 'Follow'}
+                        <div className="flex items-center justify-center">
+                          <svg className={`w-4 h-4 mr-2 ${following ? 'text-gray-600' : 'text-purple-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            {following ? (
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            ) : (
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                            )}
+                          </svg>
+                          {following ? 'Following' : 'Follow'}
+                        </div>
                       </button>
                     </>
                   )}
