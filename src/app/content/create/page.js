@@ -187,18 +187,44 @@ export default function CreateContent() {
                   variant="default"
                 />
 
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="isPublic"
-                    name="isPublic"
-                    checked={formData.isPublic}
-                    onChange={handleInputChange}
-                    className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500"
-                  />
-                  <label htmlFor="isPublic" className="ml-2 text-sm font-medium text-gray-700">
-                    Make this content public (visible to everyone)
-                  </label>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h3 className="text-sm font-medium text-gray-700 mb-3">Access Type</h3>
+                  <div className="space-y-2 text-sm text-gray-600">
+                    {formData.price && parseFloat(formData.price) > 0 ? (
+                      <div className="flex items-center text-purple-600">
+                        <div className="w-2 h-2 bg-purple-600 rounded-full mr-2"></div>
+                        <span className="font-medium">Pay-per-view content (${parseFloat(formData.price || 0).toFixed(2)})</span>
+                      </div>
+                    ) : formData.isPublic ? (
+                      <div className="flex items-center text-green-600">
+                        <div className="w-2 h-2 bg-green-600 rounded-full mr-2"></div>
+                        <span className="font-medium">Free content (visible to everyone)</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center text-blue-600">
+                        <div className="w-2 h-2 bg-blue-600 rounded-full mr-2"></div>
+                        <span className="font-medium">Subscriber-only content</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {(!formData.price || parseFloat(formData.price) === 0) && (
+                    <div className="mt-3">
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id="isPublic"
+                          name="isPublic"
+                          checked={formData.isPublic}
+                          onChange={handleInputChange}
+                          className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500"
+                        />
+                        <span className="ml-2 text-sm font-medium text-gray-700">
+                          Make this content free (otherwise requires subscription)
+                        </span>
+                      </label>
+                    </div>
+                  )}
                 </div>
               </div>
 

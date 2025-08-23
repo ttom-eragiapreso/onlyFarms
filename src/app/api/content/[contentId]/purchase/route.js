@@ -12,7 +12,7 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { contentId } = params;
+    const { contentId } = await params;
     if (!contentId) {
       return NextResponse.json({ error: 'Content ID is required' }, { status: 400 });
     }

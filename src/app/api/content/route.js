@@ -92,6 +92,13 @@ export async function POST(request) {
       accessType = 'subscription';
     }
 
+    // Content should be published if:
+    // 1. It's marked as public (free content)
+    // 2. It's pay-per-view (so people can see preview and purchase)
+    // 3. It's subscription content (so subscribers can see it)
+    // The only case where content shouldn't be published is if creator explicitly wants to keep it as draft
+    const shouldPublish = isPublic || (price && parseFloat(price) > 0) || true; // Always publish for now
+
     // Create content document
     const contentData = {
       creator: session.user.id,
@@ -102,8 +109,8 @@ export async function POST(request) {
       accessType,
       price: price ? parseFloat(price) : 0,
       tags: tags ? tags.split(',').map(tag => tag.trim()).filter(Boolean) : [],
-      isPublished: isPublic,
-      publishedAt: isPublic ? new Date() : null,
+      isPublished: shouldPublish,
+      publishedAt: shouldPublish ? new Date() : null,
     };
 
     const content = new Content(contentData);
