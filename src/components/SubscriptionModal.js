@@ -10,7 +10,14 @@ import {
   useElements,
 } from '@stripe/react-stripe-js';
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
+const stripePromise = (() => {
+  const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+  if (!publishableKey || publishableKey === 'pk_test_your-stripe-public-key') {
+    console.warn('Stripe publishable key not configured properly. Stripe functionality will be disabled.');
+    return null;
+  }
+  return loadStripe(publishableKey);
+})();
 
 const CheckoutForm = ({ creator, onSuccess, onError, onCancel }) => {
   const stripe = useStripe();

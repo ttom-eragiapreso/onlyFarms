@@ -10,7 +10,12 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 let stripePromise;
 const getStripe = () => {
   if (!stripePromise) {
-    stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
+    const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+    if (!publishableKey) {
+      console.warn('Stripe publishable key not found. Stripe functionality will be disabled.');
+      return null;
+    }
+    stripePromise = loadStripe(publishableKey);
   }
   return stripePromise;
 };
